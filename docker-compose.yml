@@ -1,0 +1,64 @@
+version: "3"
+services:
+  #MYsql service
+  core-singula-db:
+    image: mysql:8.0
+    container_name: core-singula-db
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_DATABASE: restalegcore
+      MYSQL_ROOT_PASSWORD: restalegcorepass
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - dbdata:/var/lib/mysql/
+      - ./core-mysql/my.cnf:/etc/my.cnf
+    networks:
+      - singula-network
+
+  #PHP Service
+  core-singula-laravel:
+    build:
+      context: ../core/
+      dockerfile: Dockerfile
+    image: digitalocean.com/php
+    container_name: core-singula-laravel
+    restart: unless-stopped
+    tty: true
+    environment:
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    volumes:
+      - ../core/:/var/www
+      - ./core-php/local.ini:/usr/local/etc/php/conf.d/local.ini
+      - ./core-php/conf.d/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
+      - ./core-php/conf.d/error_reporting.ini:/usr/local/etc/php/conf.d/error_reporting.ini
+    networks:
+      - singula-network
+
+  #Nginx Service
+  core-singula-ngnix:
+    image: nginx:alpine
+    container_name: core-singula-ngnix
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "81:80"
+      - "444:443"
+    volumes:
+      - ../core/:/var/www
+      - ./core-nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - singula-network
+#Docker Networks
+networks:
+  singula-network:
+    driver: bridge
+#Volumes
+volumes:
+  dbdata:
+    driver: local
